@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ShowPlayerName(APawn* InPawn);
 
+	UFUNCTION(BlueprintCallable)
+	void ShowPlayerAssBrain(APawn* InPawn);
+
 protected:
 	virtual void NativeDestruct() override;
 };

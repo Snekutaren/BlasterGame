@@ -6,6 +6,10 @@
 #include "Camera/CameraComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerState.h"
+#include "Blaster/Weapon/Weapon.h"
+#include "Blaster/BlasterComponents/CombatComponent.h"
 
 // Sets default values
 ABlasterCharacter::ABlasterCharacter()
@@ -27,13 +31,39 @@ ABlasterCharacter::ABlasterCharacter()
 
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(RootComponent);
+
+	Combat = CreateDefaultSubobject<UCombatComponent>(TEXT("CombatComponent"));
+	Combat->SetIsReplicated(true);
 }
+
+void ABlasterCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME_CONDITION(ABlasterCharacter, OverlappingWeapon, COND_OwnerOnly);
+}
+
+
 
 // Called when the game starts or when spawned
 void ABlasterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	//ShowGameDebugInfo();
+}
+
+// Called every frame
+void ABlasterCharacter::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	/*
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(true);
+	}
+	*/
 }
 
 // Called to bind functionality to input
@@ -48,6 +78,16 @@ void ABlasterCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCo
 	PlayerInputComponent->BindAxis(TEXT("Turn"), this, &ABlasterCharacter::Turn);
 	PlayerInputComponent->BindAxis(TEXT("LookUp"), this, &ABlasterCharacter::LookUp);
 
+	PlayerInputComponent->BindAction("Equip", IE_Pressed, this, &ABlasterCharacter::EquipButtonPressed);
+}
+
+void ABlasterCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	if (Combat)
+	{
+		Combat->Character = this;
+	}
 }
 
 void ABlasterCharacter::MoveForward(float Value)
@@ -80,10 +120,95 @@ void ABlasterCharacter::LookUp(float Value)
 	AddControllerPitchInput(Value);
 }
 
-// Called every frame
-void ABlasterCharacter::Tick(float DeltaTime)
+void ABlasterCharacter::EquipButtonPressed()
 {
-	Super::Tick(DeltaTime);
 
+}
+
+void ABlasterCharacter::SetOverlappingWeapon(AWeapon* Weapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(false);
+	}
+	OverlappingWeapon = Weapon;
+	if (IsLocallyControlled())
+	{
+		if (OverlappingWeapon)
+		{
+			OverlappingWeapon->ShowPickupWidget(true);
+		}
+	}
+}
+
+void ABlasterCharacter::OnRep_OverlappingWeapon(AWeapon* LastWeapon)
+{
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->ShowPickupWidget(true);
+	}
+	if (LastWeapon)
+	{
+		LastWeapon->ShowPickupWidget(false);
+	}
+}
+
+void ABlasterCharacter::ToggleDebug(bool Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Reached ToggleDebug function in BlasterCharacter.cpp"));
+	if (GEngine && Value)
+	{
+		ShowGameDebugInfo();
+	}
+	else if (GEngine)
+	{
+		GEngine->ClearOnScreenDebugMessages();
+	}
+}
+
+void ABlasterCharacter::ShowGameDebugInfo()
+{
+	APawn* DPawn = Cast<APawn>(this);
+	ENetRole DLocalRole = DPawn->GetLocalRole();
+	FString DRole;
+	FString DPlayerName;
+
+	switch (DLocalRole)
+	{
+	case ENetRole::ROLE_Authority:
+		DRole = FString("Authority");
+		break;
+	case ENetRole::ROLE_AutonomousProxy:
+		DRole = FString("Autonomous Proxy");
+		break;
+	case ENetRole::ROLE_SimulatedProxy:
+		DRole = FString("Simulated Proxy");
+		break;
+	case ENetRole::ROLE_None:
+		DRole = FString("None");
+		break;
+	}
+
+	FString DLocalRoleString = FString::Printf(TEXT("Local Role: %s"), *DRole);
+
+	if (DPawn)
+	{
+		AController* DController = DPawn->GetController();
+		if (DController)
+		{
+			APlayerState* DPlayerState = Cast<APlayerState>(Controller->PlayerState);
+			if (DPlayerState)
+			{
+				DPlayerName = DPlayerState->GetPlayerName();
+			}
+		}
+	}
+
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 60.f, FColor::White, FString::Printf(TEXT("Player Name: %s"), *DPlayerName));
+		GEngine->AddOnScreenDebugMessage(-1, 60.f, FColor::White, FString::Printf(TEXT("%s"), *DLocalRoleString));
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Reached ShowGameDebugInfo function in BlasterCharacter.cpp"));
 }
 

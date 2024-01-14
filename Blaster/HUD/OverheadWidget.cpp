@@ -36,8 +36,6 @@ void UOverheadWidget::ShowPlayerNetRole(APawn* InPawn)
 	FString LocalRoleString = FString::Printf(TEXT("Local Role: %s"), *Role);
 	SetDisplayText(LocalRoleString);
 	UE_LOG(LogTemp, Warning, TEXT("Reached ShowPlayerNetRole function"));
-	ShowPlayerName(InPawn);
-
 }
 
 void UOverheadWidget::ShowPlayerName(APawn* InPawn)
@@ -58,11 +56,14 @@ void UOverheadWidget::ShowPlayerName(APawn* InPawn)
 	}
 
 	FString PrintName = FString::Printf(TEXT("Player Name: %s"), *PlayerName);
-	//SetDisplayText(PrintName);
+	SetDisplayText(PrintName);
 	UE_LOG(LogTemp, Warning, TEXT("Reached ShowPlayerName function"));
 }
 
-
+void UOverheadWidget::ShowPlayerAssBrain(APawn* InPawn)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ASSBRAIN!"));
+}
 
 void UOverheadWidget::NativeDestruct()
 {
